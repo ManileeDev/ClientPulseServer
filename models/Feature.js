@@ -23,7 +23,7 @@ const featureSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: ['planned', 'in_development', 'testing', 'completed', 'cancelled'],
-    default: 'Completed'
+    default: 'completed'
   },
   priority: {
     type: String,

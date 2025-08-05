@@ -1,18 +1,19 @@
 const Feedback = require('../models/Feedback');
+const Feature = require('../models/Feature');
 
 // Create new feedback
 const createFeedback = async (req, res) => {
   try {
-    const { title, description, category, priority, rating, tags } = req.body;
+    const { featureId, description, category, priority, rating, tags } = req.body;
     const userId = req.user._id;
     const userEmail = req.user.email;
     const userName = req.user.name;
 
     // Validate required fields
-    if (!title || !description || !category || !priority || !rating) {
+    if (!featureId || !description || !category || !priority || !rating) {
       return res.status(400).json({
         success: false,
-        message: 'Title, description, category, priority, and rating are required'
+        message: 'Feature, description, category, priority, and rating are required'
       });
     }
 
@@ -24,7 +25,21 @@ const createFeedback = async (req, res) => {
       });
     }
 
+    // Find the selected feature
+    const feature = await Feature.findById(featureId);
+    if (!feature) {
+      return res.status(404).json({
+        success: false,
+        message: 'Selected feature not found'
+      });
+    }
+
+    // Generate title from feature name and feedback type
+    const title = `Feedback for ${feature.name}`;
+
     const feedback = new Feedback({
+      featureId,
+      featureName: feature.name,
       title,
       description,
       category,
@@ -37,6 +52,22 @@ const createFeedback = async (req, res) => {
     });
 
     const savedFeedback = await feedback.save();
+
+    // Add feedback to feature's feedback array
+    await Feature.findByIdAndUpdate(
+      featureId,
+      {
+        $push: {
+          feedback: {
+            feedbackId: savedFeedback._id,
+            votes: 0
+          }
+        },
+        $inc: {
+          'metrics.userRequests': 1
+        }
+      }
+    );
 
     res.status(201).json({
       success: true,
@@ -260,6 +291,21 @@ const deleteFeedback = async (req, res) => {
         success: false,
         message: 'Feedback not found'
       });
+    }
+
+    // Remove feedback from feature's feedback array
+    if (feedback.featureId) {
+      await Feature.findByIdAndUpdate(
+        feedback.featureId,
+        {
+          $pull: {
+            feedback: { feedbackId: id }
+          },
+          $inc: {
+            'metrics.userRequests': -1
+          }
+        }
+      );
     }
 
     res.json({

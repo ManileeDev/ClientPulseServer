@@ -84,13 +84,34 @@ const getAllFeatures = async (req, res) => {
       .limit(parseInt(limit))
       .skip(skip)
       .populate('assignedTo', 'name email role')
-      .populate('feedback.feedbackId', 'title rating');
+      .populate('feedback.feedbackId', 'title rating description priority');
 
     const total = await Feature.countDocuments(query);
 
+    // Calculate feedback count and average rating for each feature
+    const featuresWithStats = features.map(feature => {
+      const featureObj = feature.toObject();
+      
+      // Filter out null/undefined feedback entries
+      const validFeedback = featureObj.feedback.filter(fb => fb.feedbackId && fb.feedbackId.rating);
+      
+      // Calculate feedback count
+      featureObj.feedbackCount = validFeedback.length;
+      
+      // Calculate average rating
+      if (validFeedback.length > 0) {
+        const totalRating = validFeedback.reduce((sum, fb) => sum + fb.feedbackId.rating, 0);
+        featureObj.avgRating = totalRating / validFeedback.length;
+      } else {
+        featureObj.avgRating = 0;
+      }
+      
+      return featureObj;
+    });
+
     res.json({
       success: true,
-      features,
+      features: featuresWithStats,
       pagination: {
         total,
         page: parseInt(page),
@@ -115,7 +136,7 @@ const getFeatureById = async (req, res) => {
 
     const feature = await Feature.findById(id)
       .populate('assignedTo', 'name email role')
-      .populate('feedback.feedbackId', 'title rating description userId')
+      .populate('feedback.feedbackId', 'title rating description userId priority')
       .populate('dependencies.featureId', 'name status');
 
     if (!feature) {
@@ -125,9 +146,22 @@ const getFeatureById = async (req, res) => {
       });
     }
 
+    // Calculate feedback stats
+    const featureObj = feature.toObject();
+    const validFeedback = featureObj.feedback.filter(fb => fb.feedbackId && fb.feedbackId.rating);
+    
+    featureObj.feedbackCount = validFeedback.length;
+    
+    if (validFeedback.length > 0) {
+      const totalRating = validFeedback.reduce((sum, fb) => sum + fb.feedbackId.rating, 0);
+      featureObj.avgRating = totalRating / validFeedback.length;
+    } else {
+      featureObj.avgRating = 0;
+    }
+
     res.json({
       success: true,
-      feature
+      feature: featureObj
     });
   } catch (error) {
     console.error('Get feature by ID error:', error);
@@ -149,11 +183,29 @@ const getFeaturesByCategory = async (req, res) => {
       isArchived: false 
     })
     .sort({ priority: -1, createdAt: -1 })
-    .populate('assignedTo', 'name email role');
+    .populate('assignedTo', 'name email role')
+    .populate('feedback.feedbackId', 'title rating description priority');
+
+    // Calculate feedback stats for each feature
+    const featuresWithStats = features.map(feature => {
+      const featureObj = feature.toObject();
+      const validFeedback = featureObj.feedback.filter(fb => fb.feedbackId && fb.feedbackId.rating);
+      
+      featureObj.feedbackCount = validFeedback.length;
+      
+      if (validFeedback.length > 0) {
+        const totalRating = validFeedback.reduce((sum, fb) => sum + fb.feedbackId.rating, 0);
+        featureObj.avgRating = totalRating / validFeedback.length;
+      } else {
+        featureObj.avgRating = 0;
+      }
+      
+      return featureObj;
+    });
 
     res.json({
       success: true,
-      features
+      features: featuresWithStats
     });
   } catch (error) {
     console.error('Get features by category error:', error);

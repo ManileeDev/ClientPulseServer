@@ -1,9 +1,18 @@
 const mongoose = require("mongoose");
 
 const feedbackSchema = new mongoose.Schema({
-  title: {
+  featureId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Feature',
+    required: true
+  },
+  featureName: {
     type: String,
     required: true,
+    trim: true
+  },
+  title: {
+    type: String,
     trim: true,
     maxlength: 200
   },
