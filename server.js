@@ -14,8 +14,25 @@ const configRouter = require("./routes/configRoute");
 
 app.use(morgan("dev"));
 app.use(express.json());
+// Allow multiple origins for CORS
+const allowedOrigins = [
+  "http://localhost:5173", // Local development
+  "http://localhost:3000", // Alternative local port
+  process.env.CORS_ORIGIN  // Production frontend URL from environment
+].filter(Boolean); // Remove undefined values
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || "http://localhost:5173",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+    return callback(new Error(msg), false);
+  },
   credentials: true,
 }));
 app.use("/api", userRouter);
