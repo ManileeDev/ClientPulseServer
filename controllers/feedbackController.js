@@ -4,10 +4,16 @@ const Feature = require('../models/Feature');
 // Create new feedback
 const createFeedback = async (req, res) => {
   try {
-    const { featureId, description, category, priority, rating, tags } = req.body;
+    const { featureId, description, category, priority, rating, tags, isAnonymous } = req.body;
+    
+    console.log('Feedback creation - isAnonymous flag:', isAnonymous);
+    console.log('Feedback creation - user name:', req.user.name);
+    
     const userId = req.user._id;
     const userEmail = req.user.email;
-    const userName = req.user.name;
+    const userName = isAnonymous ? "Anonymous" : req.user.name;
+    
+    console.log('Feedback creation - final userName:', userName);
 
     // Validate required fields
     if (!featureId || !description || !category || !priority || !rating) {
@@ -48,6 +54,7 @@ const createFeedback = async (req, res) => {
       userId,
       userEmail,
       userName,
+      isAnonymous: isAnonymous || false,
       tags: tags || []
     });
 

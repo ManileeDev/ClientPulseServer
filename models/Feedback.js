@@ -59,6 +59,10 @@ const feedbackSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  isAnonymous: {
+    type: Boolean,
+    default: false
+  },
   isArchived: {
     type: Boolean,
     default: false
